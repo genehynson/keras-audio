@@ -1,7 +1,8 @@
 from preprocess import *
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, Embedding
+from keras.layers import CuDNNLSTM as LSTM
 from keras.utils import to_categorical
 import wandb
 from wandb.keras import WandbCallback
@@ -14,7 +15,7 @@ config.buckets = 20
 
 
 # Save data to array file first
-save_data_to_array(max_len=config.max_len, n_mfcc=config.buckets)
+# save_data_to_array(max_len=config.max_len, n_mfcc=config.buckets)
 
 labels = ["bed", "happy", "cat"]
 
@@ -25,6 +26,12 @@ X_train, X_test, y_train, y_test = get_train_test()
 channels = 1
 config.epochs = 50
 config.batch_size = 100
+config.filters = 250
+config.kernel_size = 3
+
+config.vocab_size = 1000
+config.maxlen = 1000
+config.embedding_dims = 50
 
 num_classes = 3
 
@@ -37,6 +44,21 @@ y_train_hot = to_categorical(y_train)
 y_test_hot = to_categorical(y_test)
 
 model = Sequential()
+model.add(Conv2D(config.filters,
+                 config.kernel_size,
+                 padding='valid',
+                 activation='relu'))
+model.add(Dropout(0.3))
+model.add(Conv2D(config.filters,
+                 config.kernel_size,
+                 padding='valid',
+                 activation='relu'))
+model.add(Dropout(0.5))
+model.add(Conv2D(config.filters,
+                 config.kernel_size,
+                 padding='valid',
+                 activation='relu'))
+model.add(Dropout(0.7))
 model.add(Flatten(input_shape=(config.buckets, config.max_len, channels)))
 model.add(Dense(num_classes, activation='softmax'))
 model.compile(loss="categorical_crossentropy",
